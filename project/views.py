@@ -19,16 +19,22 @@ def random_pin(length):
 class Generate(Resource):
     def get(self):
         try:
+            #generate a random uuid 15 digits
             epin = random_pin(15)
+            #generate a random uuid 25 digits
             eserial_no = random_pin(25)
+            #make an object of the database class
             new_pin = PinGenerator(pin = epin, serial_no = eserial_no)
+
+            #compare the generated digits with database, if any exists, generate again
             if PinGenerator.query.get(epin) or PinGenerator.query.filter_by(serial_no= eserial_no).first():
                 db.session.rollback()
                 return redirect(url_for('generate'))
+            # if they don't exist in db, add to database and return the generated digits
             db.session.add(new_pin)
             db.session.commit()
             return {"pin": epin, "s/n": eserial_no}, 200
-        except exc.IntegrityError:
+        except exc.IntegrityError: #for any other exception, flag error message
             db.session.rollback()
             return {"message": " Oops! try again later"}, 404
 
@@ -36,15 +42,19 @@ api.add_resource(Generate, '/generate')
 
 
 class Validate(Resource):
-    def get(self, serial_no, pin):
-        eserial_no = str(serial_no)
-        epin = str(pin)
-        if PinGenerator.query.filter_by(serial_no=eserial_no).first() and PinGenerator.query.get(epin):
+    def post(self):
+        #get serial_no and pin from user, and convert to string
+        request_data = request.get_json()
+        eserial_no = str(request_data['s/n'])
+        epin = str(request_data['pin'])
+        #check if both serial_no and pin exist in the database
+        chkpin = PinGenerator.query.filter_by(pin=epin, serial_no=eserial_no).first()
+        if chkpin: # if they exist, return 1 connoting valid
             return {'message':"1"},200
-        else:
+        else: # if they don't exist, return 0 connoting invalid
             return {'message':"0"}, 200
 
-api.add_resource(Validate, '/validate/<string:serial_no>/<string:pin>')
+api.add_resource(Validate, '/validate')
 
 
 class Home(Resource):

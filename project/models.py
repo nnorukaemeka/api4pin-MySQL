@@ -1,3 +1,5 @@
+## The models.py takes care of the database, creation of tables using SQLAlchemy
+
 from project import db
 from datetime import date, time
 
